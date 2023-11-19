@@ -1,5 +1,7 @@
 #include <iostream>
 #include <math.h>
+#include <thread>
+#include <atomic>
 
 #include <Windows.h>
 #include <xinput.h>
@@ -10,7 +12,19 @@
 //const POINT charPos({ 680, 315 });
 const POINT charPos({ 960, 475 });
 
+std::atomic<bool> canContinue = true;
+bool canReleaseR2 = false;
+
+double prevRX = 32768;
+double prevRY = 32768;
+
 using namespace std;
+
+void waitForSkill(int ms)
+{
+	Sleep(ms);
+	canContinue = true;
+}
 
 void getUnitVec(double& unitX, double& unitY)
 {
@@ -45,9 +59,32 @@ UINT sendInputW(int keyCode)
 	return SendInput(1, &ip, sizeof(INPUT));
 }
 
+void sendKeyPress(int code)
+{
+	INPUT Inputs[2] = { 0 };
+
+	Inputs[0].type = INPUT_KEYBOARD;
+	Inputs[0].ki.wScan = 0; // hardware scan code for key
+	Inputs[0].ki.time = 0;
+	Inputs[0].ki.dwExtraInfo = 0;
+	Inputs[0].ki.wVk = code; // virtual-key code for the "w" key
+	Inputs[0].ki.dwFlags = 0;
+
+	Inputs[1].type = INPUT_KEYBOARD;
+	Inputs[1].ki.wScan = 0; // hardware scan code for key
+	Inputs[1].ki.time = 0;
+	Inputs[1].ki.dwExtraInfo = 0;
+	Inputs[1].ki.wVk = code; // virtual-key code for the "w" key
+	Inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+
+	SendInput(2, Inputs, sizeof(INPUT));
+
+	Sleep(200);
+}
+
 void doSomething(char key, int code)
 {
-	if (GetKeyState(key) & 0x8000)
+	if (true)
 	{
 		double unitX = 0.0;
 		double unitY = 0.0;
@@ -142,18 +179,43 @@ void doSomething(char key, int code)
 			//ReleaseDC(NULL, hDC);
 		}
 
-		Sleep(200);
+		//Sleep(200);
 	}
 }
 
-int main() {
+int main()
+{
+	SetCursor(NULL);
 
 	bool isMoving = false;
 	while (1)
 	{
+		if (!canContinue)
+		{
+			continue;
+		}
+
 		//POINT posA;
 		//GetCursorPos(&posA);
 		//cout << posA.x << " " << posA.y << endl;
+
+		bool isAPressed = false;
+		bool isBPressed = false;
+		bool isYPressed = false;
+		bool isXPressed = false;
+		bool isL1Pressed = false;
+		bool isL3Pressed = false;
+		bool isR1Pressed = false;
+		bool isR3Pressed = false;
+		bool isBackPressed = false;
+		bool isStartPressed = false;
+		bool isUpPressed = false;
+		bool isDownPressed = false;
+		bool isLeftPressed = false;
+		bool isRightPressed = false;
+		bool isL2Pressed = false;
+		bool isR2Pressed = false;
+		bool isR2Released = true;
 
 		DWORD dwResult;
 		for (DWORD i = 0; i < XUSER_MAX_COUNT; i++)
@@ -166,27 +228,242 @@ int main() {
 			{
 				//cout << "a" << i << " " << dwResult << endl;
 
+				WORD buttons = state.Gamepad.wButtons;
+				isAPressed = buttons == XINPUT_GAMEPAD_A;
+				isBPressed = buttons == XINPUT_GAMEPAD_B;
+				isYPressed = buttons == XINPUT_GAMEPAD_Y;
+				isXPressed = buttons == XINPUT_GAMEPAD_X;
+				isL1Pressed = buttons == XINPUT_GAMEPAD_LEFT_SHOULDER;
+				isL3Pressed = buttons == XINPUT_GAMEPAD_LEFT_THUMB;
+				isR1Pressed = buttons == XINPUT_GAMEPAD_RIGHT_SHOULDER;
+				isR3Pressed = buttons == XINPUT_GAMEPAD_RIGHT_THUMB;
+				isUpPressed = buttons == XINPUT_GAMEPAD_DPAD_UP;
+				isDownPressed = buttons == XINPUT_GAMEPAD_DPAD_DOWN;
+				isLeftPressed = buttons == XINPUT_GAMEPAD_DPAD_LEFT;
+				isRightPressed = buttons == XINPUT_GAMEPAD_DPAD_RIGHT;
+				isBackPressed = buttons == XINPUT_GAMEPAD_BACK;
+				isStartPressed = buttons == XINPUT_GAMEPAD_START;
+				isL2Pressed = state.Gamepad.bLeftTrigger > 150;
+				isR2Pressed = state.Gamepad.bRightTrigger > 150;
+				isR2Released = state.Gamepad.bRightTrigger == 0;
+
+				double RX = state.Gamepad.sThumbRX + 32768;
+				double RY = state.Gamepad.sThumbRY + 32768;
+
 				double LX = state.Gamepad.sThumbLX + 32768;
 				double LY = state.Gamepad.sThumbLY + 32768;
-				cout << LX << " " << LY << endl;
+				//cout << LX << " " << LY << endl;
 
-				const double deadZone = 9600;
-				if (
-					(LX <= 32768 - deadZone || LX >= 32768 + deadZone)
-					|| (LY <= 32768 - deadZone || LY >= 32768 + deadZone))
+				const double deadzoneR = 8000;
+				const double deadZoneL = 9600;
+				
+				if (isR2Pressed)
+				{
+					//SetCursorPos(936, 468);
+					//Sleep(100);
+
+					INPUT Inputs[1] = { 0 };
+					//Inputs[0].type = INPUT_MOUSE;
+					//Inputs[0].mi.dx = 32500; // desired X coordinate
+					//Inputs[0].mi.dy = 25800; // desired Y coordinate
+					//Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+					Inputs[0].type = INPUT_MOUSE;
+					Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+					//Inputs[1].type = INPUT_MOUSE;
+					//Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+					SendInput(1, Inputs, sizeof(INPUT));
+					//SetCursorPos(charPos.x, charPos.y);
+
+					//Sleep(200);
+
+					canReleaseR2 = true;
+				}
+				else if (canReleaseR2 && isR2Released)
+				{
+					INPUT Inputs[1] = { 0 };
+					//Inputs[0].type = INPUT_MOUSE;
+					//Inputs[0].mi.dx = 32500; // desired X coordinate
+					//Inputs[0].mi.dy = 25800; // desired Y coordinate
+					//Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+					Inputs[0].type = INPUT_MOUSE;
+					Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+					//Inputs[1].type = INPUT_MOUSE;
+					//Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+					SendInput(1, Inputs, sizeof(INPUT));
+					canReleaseR2 = false;
+				}
+				if (isL2Pressed)
 				{
 					INPUT Inputs[2] = { 0 };
+
 					Inputs[0].type = INPUT_MOUSE;
-					Inputs[0].mi.dx = 32768 + (LX - 32768) / 10; // desired X coordinate
-					Inputs[0].mi.dy = 29350 + ((65536 - LY) - 32768) / 6; // desired Y coordinate
+					Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+
+					//Inputs[0].type = INPUT_MOUSE;
+					//Inputs[0].mi.dx = 32500; // desired X coordinate
+					//Inputs[0].mi.dy = 25800; // desired Y coordinate
+					//Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+					
+					Inputs[1].type = INPUT_MOUSE;
+					Inputs[1].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+					SendInput(2, Inputs, sizeof(INPUT));
+					
+					if (isMoving)
+					{
+						isMoving = false;
+						Sleep(500);
+					}
+
+					INPUT InputDown[1] = { 0 };
+					InputDown[0].type = INPUT_MOUSE;
+					InputDown[0].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+					SendInput(1, InputDown, sizeof(INPUT));
+				}
+				else if (isXPressed)
+				{
+					doSomething('2', 50);
+				}
+				else if (isBPressed)
+				{
+					doSomething('3', 51);
+				}
+				else if (isL1Pressed)
+				{
+					sendKeyPress(87);
+				}
+				else if (isL3Pressed)
+				{
+					//sendKeyPress();
+				}
+				else if (isR1Pressed)
+				{
+					sendKeyPress(81);
+				}
+				else if (isUpPressed)
+				{
+					sendKeyPress(54);
+				}
+				else if (isDownPressed)
+				{
+					sendKeyPress(56);
+				}
+				else if (isLeftPressed)
+				{
+					sendKeyPress(52);
+				}
+				else if (isRightPressed)
+				{
+					sendKeyPress(53);
+				}
+				else if (isBackPressed)
+				{
+					sendKeyPress(73);
+				}
+				else if (isStartPressed)
+				{
+					sendKeyPress(27);
+				}
+				else if (isYPressed)
+				{
+					sendKeyPress(49);
+				}
+				else if (isAPressed)
+				{
+					sendKeyPress(69);
+				}
+				else if (isR3Pressed)
+				{
+					double unitX = 0.0;
+					double unitY = 0.0;
+					getUnitVec(unitX, unitY);
+					const double unitCoeff = 400;
+					const double incrX = unitCoeff * unitX;
+					const double incrY = unitCoeff * unitY;
+					//SetCursorPos(charPos.x + incrX, charPos.y + incrY);
+					//Sleep(200);
+					//sendInputW(84);
+
+					INPUT Inputs[3] = { 0 };
+
+					Inputs[0].type = INPUT_MOUSE;
+					Inputs[0].mi.dx = (charPos.x + incrX) * 30; // desired X coordinate
+					Inputs[0].mi.dy = (charPos.y + incrY) * 60; // desired Y coordinate
 					Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
-					Inputs[1].type = INPUT_MOUSE;
-					Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+					//cout << Inputs[0].mi.dx << " " << Inputs[0].mi.dy << endl;
 
-					SendInput(2, Inputs, sizeof(INPUT));
+					Inputs[1].type = INPUT_KEYBOARD;
+					Inputs[1].ki.wScan = 0; // hardware scan code for key
+					Inputs[1].ki.time = 0;
+					Inputs[1].ki.dwExtraInfo = 0;
+					Inputs[1].ki.wVk = 84; // virtual-key code for the "w" key
+					Inputs[1].ki.dwFlags = 0;
 
-					isMoving = true;
+					Inputs[2].type = INPUT_KEYBOARD;
+					Inputs[2].ki.wScan = 0; // hardware scan code for key
+					Inputs[2].ki.time = 0;
+					Inputs[2].ki.dwExtraInfo = 0;
+					Inputs[2].ki.wVk = 84; // virtual-key code for the "w" key
+					Inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
+
+					SendInput(3, Inputs, sizeof(INPUT));
+
+					Sleep(200);
+				}
+				else if ((RX <= 32768 - deadzoneR || RX >= 32768 + deadzoneR)
+					|| (RY <= 32768 - deadzoneR || RY >= 32768 + deadzoneR))
+				{
+					double currentRX = prevRX + (RX - 32768) * 0.00045;
+					currentRX = currentRX < 0 ? 0 : currentRX;
+					currentRX = currentRX > 65536 ? 65536 : currentRX;
+
+					double currentRY = prevRY + (65536 - RY - 32768) * 0.00045;
+					currentRY = currentRY < 0 ? 0 : currentRY;
+					currentRY = currentRY > 65536 ? 65536 : currentRY;
+
+					INPUT Inputs[1] = { 0 };
+					Inputs[0].type = INPUT_MOUSE;
+					Inputs[0].mi.dx = currentRX; // desired X coordinate
+					Inputs[0].mi.dy = currentRY; // desired Y coordinate
+					Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+				
+					SendInput(1, Inputs, sizeof(INPUT));
+
+					prevRX = Inputs[0].mi.dx;
+					prevRY = Inputs[0].mi.dy;
+				}
+				else if (
+					(LX <= 32768 - deadZoneL || LX >= 32768 + deadZoneL)
+					|| (LY <= 32768 - deadZoneL || LY >= 32768 + deadZoneL))
+				{
+					prevRX = 32768;
+					prevRY = 29350;
+
+					if (isMoving)
+					{
+						INPUT Inputs[1] = { 0 };
+						Inputs[0].type = INPUT_MOUSE;
+						Inputs[0].mi.dx = 32768 + (LX - 32768) / 7; // desired X coordinate
+						Inputs[0].mi.dy = 29350 + ((65536 - LY) - 32768) / 4.2; // desired Y coordinate
+						Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+
+						SendInput(1, Inputs, sizeof(INPUT));
+					}
+					else
+					{
+						INPUT Inputs[2] = { 0 };
+						Inputs[0].type = INPUT_MOUSE;
+						Inputs[0].mi.dx = 32768 + (LX - 32768) / 7; // desired X coordinate
+						Inputs[0].mi.dy = 29350 + ((65536 - LY) - 32768) / 4.2; // desired Y coordinate
+						Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+
+						Inputs[1].type = INPUT_MOUSE;
+						Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+
+						SendInput(2, Inputs, sizeof(INPUT));
+
+						isMoving = true;
+					}
 				}
 				else if (isMoving)
 				{
@@ -210,72 +487,6 @@ int main() {
 				//cout << "b" << i << " " << dwResult << endl;
 			}
 			//Sleep(200);
-		}
-
-		//doSomething('W', 87);
-		doSomething('2', 50);
-		doSomething('3', 51);
-		if (GetKeyState('J') & 0x8000)
-		{
-			//SetCursorPos(936, 468);
-			//Sleep(100);
-
-			INPUT Inputs[3] = { 0 };
-
-			Inputs[0].type = INPUT_MOUSE;
-			Inputs[0].mi.dx = 32500; // desired X coordinate
-			Inputs[0].mi.dy = 25800; // desired Y coordinate
-			Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-
-			Inputs[1].type = INPUT_MOUSE;
-			Inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-
-			Inputs[2].type = INPUT_MOUSE;
-			Inputs[2].mi.dwFlags = MOUSEEVENTF_LEFTUP;
-
-			SendInput(3, Inputs, sizeof(INPUT));
-			//SetCursorPos(charPos.x, charPos.y);
-
-			Sleep(200);
-		}
-		if (GetKeyState('G') & 0x8000)
-		{
-			double unitX = 0.0;
-			double unitY = 0.0;
-			getUnitVec(unitX, unitY);
-			const double unitCoeff = 400;
-			const double incrX = unitCoeff * unitX;
-			const double incrY = unitCoeff * unitY;
-			//SetCursorPos(charPos.x + incrX, charPos.y + incrY);
-			//Sleep(200);
-			//sendInputW(84);
-
-			INPUT Inputs[3] = { 0 };
-
-			Inputs[0].type = INPUT_MOUSE;
-			Inputs[0].mi.dx = (charPos.x + incrX) * 30; // desired X coordinate
-			Inputs[0].mi.dy = (charPos.y + incrY) * 60; // desired Y coordinate
-			Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-
-			//cout << Inputs[0].mi.dx << " " << Inputs[0].mi.dy << endl;
-
-			Inputs[1].type = INPUT_KEYBOARD;
-			Inputs[1].ki.wScan = 0; // hardware scan code for key
-			Inputs[1].ki.time = 0;
-			Inputs[1].ki.dwExtraInfo = 0;
-			Inputs[1].ki.wVk = 84; // virtual-key code for the "w" key
-			Inputs[1].ki.dwFlags = 0;
-
-			Inputs[2].type = INPUT_KEYBOARD;
-			Inputs[2].ki.wScan = 0; // hardware scan code for key
-			Inputs[2].ki.time = 0;
-			Inputs[2].ki.dwExtraInfo = 0;
-			Inputs[2].ki.wVk = 84; // virtual-key code for the "w" key
-			Inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
-
-			SendInput(3, Inputs, sizeof(INPUT));
-
-			Sleep(200);
 		}
 	}
 
