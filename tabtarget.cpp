@@ -14,6 +14,7 @@ const POINT charPos({ 960, 475 });
 
 std::atomic<bool> canContinue = true;
 bool canReleaseR2 = false;
+bool isCursorHidden = false;
 
 double prevRX = 32768;
 double prevRY = 32768;
@@ -80,6 +81,24 @@ void sendKeyPress(int code)
 	SendInput(2, Inputs, sizeof(INPUT));
 
 	Sleep(200);
+}
+
+void hideCursor()
+{
+	if (!isCursorHidden)
+	{
+		sendKeyPress(219);
+		isCursorHidden = true;
+	}
+}
+
+void showCursor()
+{
+	if (isCursorHidden)
+	{
+		sendKeyPress(221);
+		isCursorHidden = false;
+	}
 }
 
 void doSomething(char key, int code)
@@ -185,8 +204,6 @@ void doSomething(char key, int code)
 
 int main()
 {
-	SetCursor(NULL);
-
 	bool isMoving = false;
 	while (1)
 	{
@@ -321,58 +338,73 @@ int main()
 				}
 				else if (isXPressed)
 				{
+					hideCursor();
 					doSomething('2', 50);
 				}
 				else if (isBPressed)
 				{
+					hideCursor();
 					doSomething('3', 51);
 				}
 				else if (isL1Pressed)
 				{
+					hideCursor();
 					sendKeyPress(87);
 				}
 				else if (isL3Pressed)
 				{
+					hideCursor();
 					//sendKeyPress();
 				}
 				else if (isR1Pressed)
 				{
+					hideCursor();
 					sendKeyPress(81);
 				}
 				else if (isUpPressed)
 				{
+					hideCursor();
 					sendKeyPress(54);
 				}
 				else if (isDownPressed)
 				{
+					hideCursor();
 					sendKeyPress(56);
 				}
 				else if (isLeftPressed)
 				{
+					hideCursor();
 					sendKeyPress(52);
 				}
 				else if (isRightPressed)
 				{
+					hideCursor();
 					sendKeyPress(53);
 				}
 				else if (isBackPressed)
 				{
+					hideCursor();
 					sendKeyPress(73);
 				}
 				else if (isStartPressed)
 				{
+					hideCursor();
 					sendKeyPress(27);
 				}
 				else if (isYPressed)
 				{
+					hideCursor();
 					sendKeyPress(49);
 				}
 				else if (isAPressed)
 				{
+					hideCursor();
 					sendKeyPress(69);
 				}
 				else if (isR3Pressed)
 				{
+					hideCursor();
+
 					double unitX = 0.0;
 					double unitY = 0.0;
 					getUnitVec(unitX, unitY);
@@ -413,6 +445,8 @@ int main()
 				else if ((RX <= 32768 - deadzoneR || RX >= 32768 + deadzoneR)
 					|| (RY <= 32768 - deadzoneR || RY >= 32768 + deadzoneR))
 				{
+					showCursor();
+
 					double currentRX = prevRX + (RX - 32768) * 0.00045;
 					currentRX = currentRX < 0 ? 0 : currentRX;
 					currentRX = currentRX > 65536 ? 65536 : currentRX;
@@ -436,6 +470,8 @@ int main()
 					(LX <= 32768 - deadZoneL || LX >= 32768 + deadZoneL)
 					|| (LY <= 32768 - deadZoneL || LY >= 32768 + deadZoneL))
 				{
+					hideCursor();
+
 					prevRX = 32768;
 					prevRY = 29350;
 
