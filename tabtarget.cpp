@@ -1,9 +1,14 @@
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <math.h>
+#include <string>
 
-#include <Windows.h>
+#include <windows.h>
 #include <xinput.h>
+#include <tchar.h>
+#include <stdio.h>
+#include <conio.h>
 
 #pragma comment(lib,"XInput.lib")
 #pragma comment(lib,"Xinput9_1_0.lib")
@@ -12,9 +17,9 @@ using namespace std;
 
 bool isDebug = 0;
 
-bool shouldHideCursor = 1;
-bool cursorHideCode = 0;
-bool cursorShowCode = 0;
+std::string ahkPath;
+int cursorHideCode = 0;
+int cursorShowCode = 0;
 
 POINT charPos({ 960, 475 });
 
@@ -59,6 +64,8 @@ int l3Code = 0;
 int r3Code = 0;
 int backCode = 0;
 int startCode = 0;
+
+HANDLE ahkHandle;
 
 bool canReleaseL2 = false;
 bool canReleaseR2 = false;
@@ -120,7 +127,6 @@ void sendLeftMousePress()
 	Inputs[0].type = INPUT_MOUSE;
 	Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
 	SendInput(1, Inputs, sizeof(INPUT));
-	canReleaseR2 = true;
 }
 
 void sendLeftMouseRelease()
@@ -129,7 +135,6 @@ void sendLeftMouseRelease()
 	Inputs[0].type = INPUT_MOUSE;
 	Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTUP;
 	SendInput(1, Inputs, sizeof(INPUT));
-	canReleaseR2 = false;
 }
 
 void sendRightMouse()
@@ -259,11 +264,15 @@ void sendKeyPress(int type, int code)
 	}
 }
 
-readSettings()
+void readSettings()
 {
 	isDebug = GetPrivateProfileInt(_T("general"), _T("debug"), 0, _T(".\\settings.ini"));
 	
-	shouldHideCursor = GetPrivateProfileInt(_T("cursor"), _T("hide"), 0, _T(".\\settings.ini"));
+	TCHAR arr[256];
+	int a = GetPrivateProfileString(_T("cursor"), _T("ahk_path"), _T(""), arr, 256, _T(".\\settings.ini"));
+	std::wstring arr_w(arr);
+	ahkPath = std::string(arr_w.begin(), arr_w.end());
+
 	cursorHideCode = GetPrivateProfileInt(_T("cursor"), _T("hide_code"), 0, _T(".\\settings.ini"));
 	cursorShowCode = GetPrivateProfileInt(_T("cursor"), _T("show_code"), 0, _T(".\\settings.ini"));
 	
@@ -311,20 +320,28 @@ readSettings()
 	startType = GetPrivateProfileInt(_T("type"), _T("start"), 0, _T(".\\settings.ini"));
 }
 
-initializeAhkFile()
+void initializeAhkFile()
 {
-	std::ofstream file ("hidecursor.ahk");
+	std::stringstream streamHide;
+	streamHide << std::hex << cursorHideCode;
+	std::string cursorHideCodeHex(streamHide.str());
+
+	std::stringstream streamShow;
+	streamShow << std::hex << cursorShowCode;
+	std::string cursorShowCodeHex(streamShow.str());
+
+	std::ofstream file("hidecursor.ahk");
 	std::string text =
 		"detectHiddenWindows, On\n"
 		"gui +hwndgHwnd\n"
-		'gui,show,hide w1 h1\n'
+		"gui,show,hide w1 h1\n"
 		"winset,transparent,1,ahk_id %gHwnd%\n"
-		"gui +alwaysOnTop +toolWindow -caption +0x80000000\n""
+		"gui +alwaysOnTop +toolWindow -caption +0x80000000\n"
 		"return\n"
 		"\n"
 		"tog:=0\n"
 		"\n"
-		"SC" + std::to_string(cursorHideCode) + "::\n"
+		"VK" + cursorHideCodeHex + "::\n"
 		"if (!tog)\n"
 		"{\n"
 		"    dllcall(\"ShowCursor\",\"uint\",0)\n"
@@ -335,60 +352,83 @@ initializeAhkFile()
 		"}\n"
 		"return\n"
 		"\n"
-		"SC" + std::to_string(cursorShowCode) + "::\n"
+		"VK" + cursorShowCodeHex + "::\n"
 		"if (tog)\n"
 		"{\n"
 		"    gui,cancel\n"
-		"    dllcall(\"ShowCursor\",\"uint\",1)\n"'
+		"    dllcall(\"ShowCursor\",\"uint\",1)\n"
 		"    tog:=0\n"
 		"}\n"
-		"return"
-		
-		file << text << std::endl;
-		file.close();
+		"return";
+
+	file << text << std::endl;
+	file.close();
 }
 
-initializeAhkProcess()
+void initializeAhkProcess()
 {
-	STARTUPINFO si;     
-	PROCESS_INFORMATION pi;
-	
-	ZeroMemory(&si, sizeof(si));
-	si.cb = sizeof(si);
-	ZeroMemory(&pi, sizeof(pi));
-	
-	CreateProcess(
-		_T("hidecursor.ahk"),
-		"",
-		NULL,
-		NULL,
-		FALSE,
-		0,
-		NULL,
-		NULL, 
-		&si,
-		&pi
-	);
-	 
-	//CloseHandle(pi.hProcess);
-	//CloseHandle(pi.hThread);
-}
+	STARTUPINFOW process_startup_info{ 0 };
+	process_startup_info.cb = sizeof(process_startup_info);
 
-startAhkProcess()
-{
-	if (!shouldHideCursor)
+	PROCESS_INFORMATION process_info{ 0 };
+
+	std::string cmdStr =
+		"\""
+		+ ahkPath
+		+ "\""
+		" \""
+		".\\hidecursor.ahk"
+		"\"";
+
+	const char* msg = cmdStr.c_str();
+	size_t size = strlen(msg) + 1;
+	wchar_t* wmsg = new wchar_t[size];
+	size_t outSize;
+	mbstowcs_s(&outSize, wmsg, size, msg, size - 1);
+
+	if (CreateProcessW(NULL, wmsg, NULL, NULL, TRUE, 0, NULL, NULL, &process_startup_info, &process_info))
 	{
-		return;		
+		//WaitForSingleObject(process_info.hProcess, INFINITE); // uncomment to wait till process finish
+		ahkHandle = process_info.hProcess;
+		//CloseHandle(process_info.hProcess);
+		CloseHandle(process_info.hThread);
 	}
-	
+	else
+	{
+		std::cout << "Please check ahk exe path!" << std::endl;
+	}
+
+	delete[]wmsg;
+}
+
+void startAhkProcess()
+{	
 	initializeAhkFile();
-	initializeAhkProcess():
+	initializeAhkProcess();
+}
+
+BOOL WINAPI HandlerRoutine(DWORD eventCode)
+{
+	switch (eventCode)
+	{
+	case CTRL_CLOSE_EVENT:
+		
+		DWORD exitCode = 0;
+		TerminateProcess(ahkHandle, GetExitCodeProcess(ahkHandle, &exitCode));
+
+		return FALSE;
+		break;
+	}
+
+	return TRUE;
 }
 
 int main()
 {
+	SetConsoleCtrlHandler(HandlerRoutine, TRUE);
+
 	readSettings();
-	statAhkProcess():
+	startAhkProcess();
 	
 	while (1)
 	{
@@ -464,17 +504,33 @@ int main()
 
 			if (isR2Pressed)
 			{
-				sendLeftMousePress();
+				if (isL2Pressed)
+				{
+					sendRightMouse();
+				}
+				else
+				{
+					sendLeftMousePress();
+				}
+				canReleaseR2 = true;
 			}
 			else if (canReleaseR2 && isR2Released)
 			{
-				sendLeftMouseRelease();
+				if (!isL2Pressed)
+				{
+					sendLeftMouseRelease();
+				}
+				canReleaseR2 = false;
 			}
 			if (isL2Pressed)
 			{
-				sendRightMouse();
+				canReleaseL2 = true;
 			}
-			else if (isUpPressed)
+			else if (canReleaseL2 && isL2Released)
+			{
+				canReleaseL2 = false;
+			}
+			if (isUpPressed)
 			{
 				sendKeyPress(upType, upCode);
 			}
