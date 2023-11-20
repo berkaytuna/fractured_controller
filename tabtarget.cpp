@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <math.h>
 
 #include <Windows.h>
@@ -9,7 +10,55 @@
 
 using namespace std;
 
-const POINT charPos({ 960, 475 });
+bool isDebug = 0;
+
+bool shouldHideCursor = 1;
+bool cursorHideCode = 0;
+bool cursorShowCode = 0;
+
+POINT charPos({ 960, 475 });
+
+int upType = 0;
+int downType = 0;
+int leftType = 0;
+int rightType = 0;
+int aType0 = 0;
+int bType0 = 0;
+int xType0 = 0;
+int yType0 = 0;
+int l1Type0 = 0;
+int r1Type0 = 0;
+int aType1 = 0;
+int bType1 = 0;
+int xType1 = 0;
+int yType1 = 0;
+int l1Type1 = 0;
+int r1Type1 = 0;
+int l3Type = 0;
+int r3Type = 0;
+int backType = 0;
+int startType = 0;
+
+int upCode = 0;
+int downCode = 0;
+int leftCode = 0;
+int rightCode = 0;
+int aCode0 = 0;
+int bCode0 = 0;
+int xCode0 = 0;
+int yCode0 = 0;
+int l1Code0 = 0;
+int r1Code0 = 0;
+int aCode1 = 0;
+int bCode1 = 0;
+int xCode1 = 0;
+int yCode1 = 0;
+int l1Code1 = 0;
+int r1Code1 = 0;
+int l3Code = 0;
+int r3Code = 0;
+int backCode = 0;
+int startCode = 0;
 
 bool canReleaseL2 = false;
 bool canReleaseR2 = false;
@@ -51,7 +100,7 @@ void hideCursor()
 {
 	if (!isCursorHidden)
 	{
-		sendNormalKeyPressDirect(219);
+		sendNormalKeyPressDirect(cursorHideCode);
 		isCursorHidden = true;
 	}
 }
@@ -60,7 +109,7 @@ void showCursor()
 {
 	if (isCursorHidden)
 	{
-		sendNormalKeyPressDirect(221);
+		sendNormalKeyPressDirect(cursorShowCode);
 		isCursorHidden = false;
 	}
 }
@@ -210,54 +259,144 @@ void sendKeyPress(int type, int code)
 	}
 }
 
+readSettings()
+{
+	isDebug = GetPrivateProfileInt(_T("general"), _T("debug"), 0, _T(".\\settings.ini"));
+	
+	shouldHideCursor = GetPrivateProfileInt(_T("cursor"), _T("hide"), 0, _T(".\\settings.ini"));
+	cursorHideCode = GetPrivateProfileInt(_T("cursor"), _T("hide_code"), 0, _T(".\\settings.ini"));
+	cursorShowCode = GetPrivateProfileInt(_T("cursor"), _T("show_code"), 0, _T(".\\settings.ini"));
+	
+	charPos.x = GetPrivateProfileInt(_T("character"), _T("pos_x"), 0, _T(".\\settings.ini"));
+	charPos.y = GetPrivateProfileInt(_T("character"), _T("pos_y"), 0, _T(".\\settings.ini"));
+	
+	upCode = GetPrivateProfileInt(_T("button"), _T("up"), 0, _T(".\\settings.ini"));
+	downCode = GetPrivateProfileInt(_T("button"), _T("down"), 0, _T(".\\settings.ini"));
+	leftCode = GetPrivateProfileInt(_T("button"), _T("left"), 0, _T(".\\settings.ini"));
+	rightCode = GetPrivateProfileInt(_T("button"), _T("right"), 0, _T(".\\settings.ini"));
+	aCode0 = GetPrivateProfileInt(_T("button"), _T("a"), 0, _T(".\\settings.ini"));
+	bCode0 = GetPrivateProfileInt(_T("button"), _T("b"), 0, _T(".\\settings.ini"));
+	xCode0 = GetPrivateProfileInt(_T("button"), _T("x"), 0, _T(".\\settings.ini"));
+	yCode0 = GetPrivateProfileInt(_T("button"), _T("y"), 0, _T(".\\settings.ini"));
+	l1Code0 = GetPrivateProfileInt(_T("button"), _T("l1"), 0, _T(".\\settings.ini"));
+	r1Code0 = GetPrivateProfileInt(_T("button"), _T("r1"), 0, _T(".\\settings.ini"));
+	aCode1 = GetPrivateProfileInt(_T("button"), _T("a_2"), 0, _T(".\\settings.ini"));
+	bCode1 = GetPrivateProfileInt(_T("button"), _T("b_2"), 0, _T(".\\settings.ini"));
+	xCode1 = GetPrivateProfileInt(_T("button"), _T("x_2"), 0, _T(".\\settings.ini"));
+	yCode1 = GetPrivateProfileInt(_T("button"), _T("y_2"), 0, _T(".\\settings.ini"));
+	l1Code1 = GetPrivateProfileInt(_T("button"), _T("l1_2"), 0, _T(".\\settings.ini"));
+	r1Code1 = GetPrivateProfileInt(_T("button"), _T("r1_2"), 0, _T(".\\settings.ini"));
+	l3Code = GetPrivateProfileInt(_T("button"), _T("l3"), 0, _T(".\\settings.ini"));
+	r3Code = GetPrivateProfileInt(_T("button"), _T("r3"), 0, _T(".\\settings.ini"));
+	backCode = GetPrivateProfileInt(_T("button"), _T("back"), 0, _T(".\\settings.ini"));
+	startCode = GetPrivateProfileInt(_T("button"), _T("start"), 0, _T(".\\settings.ini"));
+	
+	upType = GetPrivateProfileInt(_T("type"), _T("up"), 0, _T(".\\settings.ini"));
+	downType = GetPrivateProfileInt(_T("type"), _T("down"), 0, _T(".\\settings.ini"));
+	leftType = GetPrivateProfileInt(_T("type"), _T("left"), 0, _T(".\\settings.ini"));
+	rightType = GetPrivateProfileInt(_T("type"), _T("right"), 0, _T(".\\settings.ini"));
+	aType0 = GetPrivateProfileInt(_T("type"), _T("a"), 0, _T(".\\settings.ini"));
+	bType0 = GetPrivateProfileInt(_T("type"), _T("b"), 0, _T(".\\settings.ini"));
+	xType0 = GetPrivateProfileInt(_T("type"), _T("x"), 0, _T(".\\settings.ini"));
+	yType0 = GetPrivateProfileInt(_T("type"), _T("y"), 0, _T(".\\settings.ini"));
+	l1Type0 = GetPrivateProfileInt(_T("type"), _T("l1"), 0, _T(".\\settings.ini"));
+	r1Type0 = GetPrivateProfileInt(_T("type"), _T("r1"), 0, _T(".\\settings.ini"));
+	aType1 = GetPrivateProfileInt(_T("type"), _T("a_2"), 0, _T(".\\settings.ini"));
+	bType1 = GetPrivateProfileInt(_T("type"), _T("b_2"), 0, _T(".\\settings.ini"));
+	xType1 = GetPrivateProfileInt(_T("type"), _T("x_2"), 0, _T(".\\settings.ini"));
+	yType1 = GetPrivateProfileInt(_T("type"), _T("y_2"), 0, _T(".\\settings.ini"));
+	l1Type1 = GetPrivateProfileInt(_T("type"), _T("l1_2"), 0, _T(".\\settings.ini"));
+	r1Type1 = GetPrivateProfileInt(_T("type"), _T("r1_2"), 0, _T(".\\settings.ini"));
+	backType = GetPrivateProfileInt(_T("type"), _T("back"), 0, _T(".\\settings.ini"));
+	startType = GetPrivateProfileInt(_T("type"), _T("start"), 0, _T(".\\settings.ini"));
+}
+
+initializeAhkFile()
+{
+	std::ofstream file ("hidecursor.ahk");
+	std::string text =
+		"detectHiddenWindows, On\n"
+		"gui +hwndgHwnd\n"
+		'gui,show,hide w1 h1\n'
+		"winset,transparent,1,ahk_id %gHwnd%\n"
+		"gui +alwaysOnTop +toolWindow -caption +0x80000000\n""
+		"return\n"
+		"\n"
+		"tog:=0\n"
+		"\n"
+		"SC" + std::to_string(cursorHideCode) + "::\n"
+		"if (!tog)\n"
+		"{\n"
+		"    dllcall(\"ShowCursor\",\"uint\",0)\n"
+		"    mousegetpos,mx,my,active\n"
+		"    gui +Owner%active%\n"
+		"    gui,show,x%mx% y%my% noactivate\n"
+		"    tog:=1\n"
+		"}\n"
+		"return\n"
+		"\n"
+		"SC" + std::to_string(cursorShowCode) + "::\n"
+		"if (tog)\n"
+		"{\n"
+		"    gui,cancel\n"
+		"    dllcall(\"ShowCursor\",\"uint\",1)\n"'
+		"    tog:=0\n"
+		"}\n"
+		"return"
+		
+		file << text << std::endl;
+		file.close();
+}
+
+initializeAhkProcess()
+{
+	STARTUPINFO si;     
+	PROCESS_INFORMATION pi;
+	
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+	
+	CreateProcess(
+		_T("hidecursor.ahk"),
+		"",
+		NULL,
+		NULL,
+		FALSE,
+		0,
+		NULL,
+		NULL, 
+		&si,
+		&pi
+	);
+	 
+	//CloseHandle(pi.hProcess);
+	//CloseHandle(pi.hThread);
+}
+
+startAhkProcess()
+{
+	if (!shouldHideCursor)
+	{
+		return;		
+	}
+	
+	initializeAhkFile();
+	initializeAhkProcess():
+}
+
 int main()
 {
-	const bool isDebug = 0;
-
-	const int upType = 0;
-	const int downType = 0;
-	const int leftType = 0;
-	const int rightType = 0;
-	const int aType0 = 1;
-	const int bType0 = 0;
-	const int xType0 = 1;
-	const int yType0 = 0;
-	const int l1Type0 = 0;
-	const int r1Type0 = 0;
-	const int aType1 = 0;
-	const int bType1 = 0;
-	const int xType1 = 0;
-	const int yType1 = 0;
-	const int l1Type1 = 0;
-	const int r1Type1 = 0;
-	const int l3Type = 0;
-	const int r3Type = 2;
-	const int backType = 0;
-	const int startType = 0;
-
-	const int upCode = 89;
-	const int downCode = 89;
-	const int leftCode = 89;
-	const int rightCode = 89;
-	const int aCode0 = 89;
-	const int bCode0 = 90;
-	const int xCode0 = 11;
-	const int yCode0 = 12;
-	const int l1Code0 = 13;
-	const int r1Code0 = 14;
-	const int aCode1 = 15;
-	const int bCode1 = 23;
-	const int xCode1 = 24;
-	const int yCode1 = 25;
-	const int l1Code1 = 21;
-	const int r1Code1 = 22;
-	const int l3Code = 89;
-	const int r3Code = 89;
-	const int backCode = 13;
-	const int startCode = 14;
-
+	readSettings();
+	statAhkProcess():
+	
 	while (1)
 	{
+		if (isDebug)
+		{
+			readSettings();
+		}
+		
 		bool isAPressed = false;
 		bool isBPressed = false;
 		bool isYPressed = false;
