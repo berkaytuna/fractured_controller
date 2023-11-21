@@ -1,4 +1,4 @@
-Gameplay Video: https://youtube.com
+Gameplay Video: https://youtu.be/JRA4mCSgwn8
 
 ** Tested with Display Resolution 1920x1080, 100% Screen Zoom. Changing these will cause different program behaviour than expected, but you can adjust settings file to change how this program behaves.
 
