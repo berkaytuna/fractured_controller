@@ -15,13 +15,9 @@
 
 using namespace std;
 
-bool isDebug = 0;
-
 std::string ahkPath;
 int cursorHideCode = 0;
 int cursorShowCode = 0;
-
-POINT charPos({ 960, 475 });
 
 int upType = 0;
 int downType = 0;
@@ -64,6 +60,24 @@ int l3Code = 0;
 int r3Code = 0;
 int backCode = 0;
 int startCode = 0;
+
+POINT screenRes({ 0, 0 });
+POINT charPos({ 0, 0 });
+
+int aoeKeyDistance = 0;
+int targetKeyRepeat = 0;
+int targetKeyDistance = 0;
+
+int thresholdL2 = 0;
+int thresholdR2 = 0;
+
+int deadzoneL = 0;
+int deadzoneR = 0;
+int sensitivityR = 0;
+int initialLX = 0;
+int initialLY = 0;
+int movCoeffLX = 0;
+int movCoeffLY = 0;
 
 HANDLE ahkHandle;
 
@@ -190,13 +204,13 @@ void sendTargetKeyPress(int code)
 	double unitX = 0.0;
 	double unitY = 0.0;
 	getUnitVec(unitX, unitY);
-	const double unitCoeff = 20;
+	const double unitCoeff = targetKeyDistance;
 	const double incrX = unitCoeff * unitX;
 	const double incrY = unitCoeff * unitY;
 
 	POINT pos({ charPos.x, charPos.y });
 
-	for (int j = 0; j < 25; j++)
+	for (int j = 0; j < targetKeyRepeat; j++)
 	{
 		pos.x += incrX;
 		pos.y += incrY;
@@ -216,15 +230,15 @@ void sendAoEKeyPress(int code)
 	double unitX = 0.0;
 	double unitY = 0.0;
 	getUnitVec(unitX, unitY);
-	const double unitCoeff = 400;
+	const double unitCoeff = aoeKeyDistance;
 	const double incrX = unitCoeff * unitX;
 	const double incrY = unitCoeff * unitY;
 
 	INPUT Inputs[3] = { 0 };
 
 	Inputs[0].type = INPUT_MOUSE;
-	Inputs[0].mi.dx = (charPos.x + incrX) * 30;
-	Inputs[0].mi.dy = (charPos.y + incrY) * 60;
+	Inputs[0].mi.dx = (charPos.x + incrX) * (65536 / screenRes.x);
+	Inputs[0].mi.dy = (charPos.y + incrY) * (65536 / screenRes.y);
 	Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
 	Inputs[1].type = INPUT_KEYBOARD;
@@ -265,19 +279,14 @@ void sendKeyPress(int type, int code)
 }
 
 void readSettings()
-{
-	isDebug = GetPrivateProfileInt(_T("general"), _T("debug"), 0, _T(".\\settings.ini"));
-	
+{	
 	TCHAR arr[256];
-	int a = GetPrivateProfileString(_T("cursor"), _T("ahk_path"), _T(""), arr, 256, _T(".\\settings.ini"));
-	std::wstring arr_w(arr);
+	GetPrivateProfileString(_T("cursor"), _T("ahk_path"), _T(""), arr, 256, _T(".\\settings.ini"));
+	std::string arr_w(arr);
 	ahkPath = std::string(arr_w.begin(), arr_w.end());
 
 	cursorHideCode = GetPrivateProfileInt(_T("cursor"), _T("hide_code"), 0, _T(".\\settings.ini"));
 	cursorShowCode = GetPrivateProfileInt(_T("cursor"), _T("show_code"), 0, _T(".\\settings.ini"));
-	
-	charPos.x = GetPrivateProfileInt(_T("character"), _T("pos_x"), 0, _T(".\\settings.ini"));
-	charPos.y = GetPrivateProfileInt(_T("character"), _T("pos_y"), 0, _T(".\\settings.ini"));
 	
 	upCode = GetPrivateProfileInt(_T("button"), _T("up"), 0, _T(".\\settings.ini"));
 	downCode = GetPrivateProfileInt(_T("button"), _T("down"), 0, _T(".\\settings.ini"));
@@ -318,6 +327,27 @@ void readSettings()
 	r1Type1 = GetPrivateProfileInt(_T("type"), _T("r1_2"), 0, _T(".\\settings.ini"));
 	backType = GetPrivateProfileInt(_T("type"), _T("back"), 0, _T(".\\settings.ini"));
 	startType = GetPrivateProfileInt(_T("type"), _T("start"), 0, _T(".\\settings.ini"));
+
+	screenRes.x = GetPrivateProfileInt(_T("screen"), _T("res_x"), 0, _T(".\\settings.ini"));
+	screenRes.y = GetPrivateProfileInt(_T("screen"), _T("res_y"), 0, _T(".\\settings.ini"));
+
+	charPos.x = GetPrivateProfileInt(_T("character"), _T("pos_x"), 0, _T(".\\settings.ini"));
+	charPos.y = GetPrivateProfileInt(_T("character"), _T("pos_y"), 0, _T(".\\settings.ini"));
+
+	aoeKeyDistance = GetPrivateProfileInt(_T("ability"), _T("aoe_key_distance"), 0, _T(".\\settings.ini"));
+	targetKeyRepeat = GetPrivateProfileInt(_T("ability"), _T("target_key_repeat"), 0, _T(".\\settings.ini"));
+	targetKeyDistance = GetPrivateProfileInt(_T("ability"), _T("target_key_distance"), 0, _T(".\\settings.ini"));
+
+	thresholdL2 = GetPrivateProfileInt(_T("trigger"), _T("threshold_l"), 0, _T(".\\settings.ini"));
+	thresholdR2 = GetPrivateProfileInt(_T("trigger"), _T("threshold_r"), 0, _T(".\\settings.ini"));
+
+	deadzoneL = GetPrivateProfileInt(_T("stick"), _T("deadzone_l"), 0, _T(".\\settings.ini"));
+	deadzoneR = GetPrivateProfileInt(_T("stick"), _T("deadzone_r"), 0, _T(".\\settings.ini"));
+	sensitivityR = GetPrivateProfileInt(_T("stick"), _T("sensitivity_r"), 0, _T(".\\settings.ini"));
+	initialLX = GetPrivateProfileInt(_T("stick"), _T("initial_lx"), 0, _T(".\\settings.ini"));
+	initialLY = GetPrivateProfileInt(_T("stick"), _T("initial_ly"), 0, _T(".\\settings.ini"));
+	movCoeffLX = GetPrivateProfileInt(_T("stick"), _T("mov_coeff_lx"), 0, _T(".\\settings.ini"));
+	movCoeffLY = GetPrivateProfileInt(_T("stick"), _T("mov_coeff_ly"), 0, _T(".\\settings.ini"));
 }
 
 void initializeAhkFile()
@@ -432,11 +462,6 @@ int main()
 	
 	while (1)
 	{
-		if (isDebug)
-		{
-			readSettings();
-		}
-		
 		bool isAPressed = false;
 		bool isBPressed = false;
 		bool isYPressed = false;
@@ -476,8 +501,8 @@ int main()
 			isRightPressed = buttons == XINPUT_GAMEPAD_DPAD_RIGHT;
 			isBackPressed = buttons == XINPUT_GAMEPAD_BACK;
 			isStartPressed = buttons == XINPUT_GAMEPAD_START;
-			isL2Pressed = state.Gamepad.bLeftTrigger > 150;
-			isR2Pressed = state.Gamepad.bRightTrigger > 150;
+			isL2Pressed = state.Gamepad.bLeftTrigger > thresholdL2;
+			isR2Pressed = state.Gamepad.bRightTrigger > thresholdR2;
 			isL2Released = state.Gamepad.bLeftTrigger == 0;
 			isR2Released = state.Gamepad.bRightTrigger == 0;
 
@@ -486,21 +511,13 @@ int main()
 
 			double LX = state.Gamepad.sThumbLX + 32768;
 			double LY = state.Gamepad.sThumbLY + 32768;
-			
-			if (isDebug)
-			{
-				cout << LX << " " << LY << endl;
-			}
 
-			const double deadzoneR = 8000;
-			const double deadZoneL = 9600;
-				
 			const bool isRightStickMoving =
 				(RX <= 32768 - deadzoneR || RX >= 32768 + deadzoneR)
 				|| (RY <= 32768 - deadzoneR || RY >= 32768 + deadzoneR);
 			const bool isLeftStickMoving =
-				(LX <= 32768 - deadZoneL || LX >= 32768 + deadZoneL)
-				|| (LY <= 32768 - deadZoneL || LY >= 32768 + deadZoneL);
+				(LX <= 32768 - deadzoneL || LX >= 32768 + deadzoneL)
+				|| (LY <= 32768 - deadzoneL || LY >= 32768 + deadzoneL);
 
 			if (isR2Pressed)
 			{
@@ -602,11 +619,11 @@ int main()
 			{
 				showCursor();
 
-				double currentRX = prevRX + (RX - 32768) * 0.00045;
+				double currentRX = prevRX + (RX - 32768) * sensitivityR / 100;
 				currentRX = currentRX < 0 ? 0 : currentRX;
 				currentRX = currentRX > 65536 ? 65536 : currentRX;
 
-				double currentRY = prevRY + (65536 - RY - 32768) * 0.00045;
+				double currentRY = prevRY + (65536 - RY - 32768) * sensitivityR / 100;
 				currentRY = currentRY < 0 ? 0 : currentRY;
 				currentRY = currentRY > 65536 ? 65536 : currentRY;
 
@@ -620,20 +637,22 @@ int main()
 
 				prevRX = Inputs[0].mi.dx;
 				prevRY = Inputs[0].mi.dy;
+
+				Sleep(1);
 			}
 			else if (isLeftStickMoving)
 			{
 				hideCursor();
 
-				prevRX = 32768;
-				prevRY = 29350;
+				prevRX = initialLX;
+				prevRY = initialLY;
 
 				if (isMoving)
 				{
 					INPUT Inputs[1] = { 0 };
 					Inputs[0].type = INPUT_MOUSE;
-					Inputs[0].mi.dx = 32768 + (LX - 32768) / 7;
-					Inputs[0].mi.dy = 29350 + ((65536 - LY) - 32768) / 4.2;
+					Inputs[0].mi.dx = initialLX + (LX - 32768) / (movCoeffLX / 10);
+					Inputs[0].mi.dy = initialLY + ((65536 - LY) - 32768) / (movCoeffLY / 10);
 					Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
 					SendInput(1, Inputs, sizeof(INPUT));
@@ -642,8 +661,8 @@ int main()
 				{
 					INPUT Inputs[2] = { 0 };
 					Inputs[0].type = INPUT_MOUSE;
-					Inputs[0].mi.dx = 32768 + (LX - 32768) / 7;
-					Inputs[0].mi.dy = 29350 + ((65536 - LY) - 32768) / 4.2;
+					Inputs[0].mi.dx = initialLX + (LX - 32768) / (movCoeffLX / 10);
+					Inputs[0].mi.dy = initialLY + ((65536 - LY) - 32768) / (movCoeffLY / 10);
 					Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
 					Inputs[1].type = INPUT_MOUSE;
@@ -653,6 +672,8 @@ int main()
 
 					isMoving = true;
 				}
+
+				Sleep(1);
 			}
 			else if (isMoving)
 			{
@@ -662,8 +683,8 @@ int main()
 				Inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTUP;
 
 				Inputs[1].type = INPUT_MOUSE;
-				Inputs[1].mi.dx = 32768;
-				Inputs[1].mi.dy = 29350;
+				Inputs[1].mi.dx = initialLX;
+				Inputs[1].mi.dy = initialLY;
 				Inputs[1].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
 				SendInput(2, Inputs, sizeof(INPUT));
