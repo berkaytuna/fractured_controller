@@ -2,7 +2,14 @@ Gameplay Video: https://youtube.com
 
 ** Tested with Display Resolution 1920x1080, 100% Screen Zoom. Changing these will cause different program behaviour than expected, but you can adjust settings file to change how this program behaves.
 
-This program enables an unofficial controller support for the game Fractured Online using XInput. The controller should be compatible with XInput. Steam Input should be disabled for the game.
+Limitations:
+- As this program simulates mouse controls, in small areas with interactable objects
+movement could feel clunky. When stucked, try to move away from interactable objects.
+- Probably not suitable for any competitive content, mainly due to how skill activation
+and target selection works in this game, which are heavily dependant on precise mouse controls.
+
+Introduction:
+- This program enables an unofficial controller support for the game Fractured Online using XInput. The controller should be compatible with XInput. Steam Input should be disabled for the game.
 
 Features:
 - Movement with left stick
