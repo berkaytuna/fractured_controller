@@ -230,7 +230,7 @@ void sendAoEKeyPress(int code)
 	double unitX = 0.0;
 	double unitY = 0.0;
 	getUnitVec(unitX, unitY);
-	const double unitCoeff = aoeKeyDistance;
+	const double unitCoeff = aoeKeyDistance * (1 + pow((1 + unitY), 2) / 2);
 	const double incrX = unitCoeff * unitX;
 	const double incrY = unitCoeff * unitY;
 
@@ -619,11 +619,11 @@ int main()
 			{
 				showCursor();
 
-				double currentRX = prevRX + (RX - 32768) * sensitivityR / 100;
+				double currentRX = prevRX + (RX - 32768) * sensitivityR / 1000;
 				currentRX = currentRX < 0 ? 0 : currentRX;
 				currentRX = currentRX > 65536 ? 65536 : currentRX;
 
-				double currentRY = prevRY + (65536 - RY - 32768) * sensitivityR / 100;
+				double currentRY = prevRY + (65536 - RY - 32768) * sensitivityR / 1000;
 				currentRY = currentRY < 0 ? 0 : currentRY;
 				currentRY = currentRY > 65536 ? 65536 : currentRY;
 
@@ -647,12 +647,15 @@ int main()
 				prevRX = initialLX;
 				prevRY = initialLY;
 
+				const double nextLX = (initialLX + (LX - 32768) / (movCoeffLX / 10));
+				const double nextLY = (initialLY + ((65536 - LY) - 32768) / (movCoeffLY / 10));
+
 				if (isMoving)
 				{
 					INPUT Inputs[1] = { 0 };
 					Inputs[0].type = INPUT_MOUSE;
-					Inputs[0].mi.dx = initialLX + (LX - 32768) / (movCoeffLX / 10);
-					Inputs[0].mi.dy = initialLY + ((65536 - LY) - 32768) / (movCoeffLY / 10);
+					Inputs[0].mi.dx = nextLX;
+					Inputs[0].mi.dy = nextLY;
 					Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
 					SendInput(1, Inputs, sizeof(INPUT));
@@ -661,8 +664,8 @@ int main()
 				{
 					INPUT Inputs[2] = { 0 };
 					Inputs[0].type = INPUT_MOUSE;
-					Inputs[0].mi.dx = initialLX + (LX - 32768) / (movCoeffLX / 10);
-					Inputs[0].mi.dy = initialLY + ((65536 - LY) - 32768) / (movCoeffLY / 10);
+					Inputs[0].mi.dx = nextLX;
+					Inputs[0].mi.dy = nextLY;
 					Inputs[0].mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 
 					Inputs[1].type = INPUT_MOUSE;
